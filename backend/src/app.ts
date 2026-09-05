@@ -13,7 +13,8 @@ import { requirePlatformAdmin } from './middleware/requirePlatformAdmin';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { emailQueue } from './config/queue';
+import { emailQueue, redisConnection } from './config/queue';
+import RedisStore from 'connect-redis';
 
 const app = express();
 
@@ -63,6 +64,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(
   session({
+    store: new RedisStore({ client: redisConnection, prefix: 'reachinbox:sess:' }),
     secret: process.env.SESSION_SECRET || 'change-this-in-production',
     resave: false,
     saveUninitialized: false,
