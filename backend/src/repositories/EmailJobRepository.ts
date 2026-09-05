@@ -108,4 +108,14 @@ export class EmailJobRepository {
     });
     return result.count > 0;
   }
+
+  async deleteManyByIdsAndUserId(ids: string[], userId: string): Promise<number> {
+    const result = await prisma.emailJob.deleteMany({
+      where: { 
+        id: { in: ids },
+        userId 
+      }
+    });
+    return result.count;
+  }
 }

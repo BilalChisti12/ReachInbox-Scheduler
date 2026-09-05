@@ -75,6 +75,46 @@ export class EmailController {
     }
   }
 
+  async bulkDeleteEmails(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      const { ids } = req.body;
+      
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ error: 'No email IDs provided' });
+        return;
+      }
+
+      // 1. Delete from PostgreSQL
+      const deletedCount = await emailJobRepo.deleteManyByIdsAndUserId(ids, userId);
+      
+      // 2. Delete from Elasticsearch
+      await elasticsearchService.deleteEmails(ids);
+
+      // 3. Remove from BullMQ queue
+      for (const id of ids) {
+        try {
+          const bullJob = await emailQueue.getJob(`email-job-${id}`);
+          if (bullJob) {
+            await bullJob.remove();
+          }
+        } catch (err: any) {
+          console.error(`Failed to remove job ${id} from BullMQ: ${err.message}`);
+        }
+      }
+
+      res.json({ success: true, message: `Deleted ${deletedCount} emails`, deletedCount });
+    } catch (error: any) {
+      console.error(`EmailController bulk delete error:`, error);
+      res.status(500).json({ error: 'Failed to bulk delete emails' });
+    }
+  }
+
   async getStats(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;

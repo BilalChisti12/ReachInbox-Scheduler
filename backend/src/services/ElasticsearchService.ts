@@ -108,6 +108,23 @@ export class ElasticsearchService {
   }
 
   /**
+   * Deletes multiple EmailJob documents from the index.
+   */
+  async deleteEmails(ids: string[]) {
+    if (!ids || ids.length === 0) return;
+    
+    try {
+      const body = ids.flatMap(id => [{ delete: { _index: this.INDEX_NAME, _id: id } }]);
+      await esClient.bulk({
+        refresh: true,
+        body
+      });
+    } catch (error: any) {
+      console.error(`Failed to bulk delete emails from ES: ${error.message}`);
+    }
+  }
+
+  /**
    * Searches for emails strictly scoped to the provided userId.
    */
   async searchEmails(userId: string, options: EmailSearchOptions = {}) {
