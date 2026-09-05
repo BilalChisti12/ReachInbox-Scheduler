@@ -106,10 +106,10 @@ export class CampaignService {
         opts: {
           delay, // BullMQ delay in ms
           jobId: `email-job-${job.id}`, // Deterministic job id for idempotency in BullMQ
-          attempts: 3,
+          attempts: 5, // Increased resilience for transient Ethereal timeouts
           backoff: {
             type: 'exponential',
-            delay: 5000,
+            delay: 10000,
           },
         },
       };
