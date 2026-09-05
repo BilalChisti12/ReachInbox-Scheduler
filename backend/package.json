@@ -37,7 +37,7 @@
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.4",
     "concurrently": "^10.0.5",
-    "connect-redis": "^10.0.0",
+    "connect-redis": "^7.1.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

@@ -14,7 +14,7 @@ import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { emailQueue, redisConnection } from './config/queue';
-import { RedisStore } from 'connect-redis';
+import RedisStore from 'connect-redis';
 import { getEnvArray } from './config/env';
 
 const app = express();
