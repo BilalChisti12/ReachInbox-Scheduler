@@ -41,14 +41,19 @@ I built this platform to solve these problems natively. Instead of relying on pe
 
 ---
 
-## Core Capabilities
+## Core Capabilities & Features Implemented
 
-- **Strictly Queue-Driven (No Cron):** Uses Redis keyspace events via BullMQ for precise, distributed delays.
-- **Idempotency & Concurrency Control:** Employs atomic state transitions to guarantee that an email is processed exactly once, regardless of how many worker processes are running.
-- **Atomic Rate Limiting:** Enforces sender and campaign limits using Redis Lua scripts, intelligently calculating required delays and rescheduling jobs to the next available hourly window when limits are exhausted.
-- **Full-Text Search:** Asynchronously projects sent and scheduled emails into Elasticsearch for rapid querying without impacting transactional database performance.
-- **Operational Visibility:** Includes Slack OAuth integration for real-time rate limit alerts, decoupled via a deduplication lock, and Bull Board for queue observability.
-- **Tenant Isolation:** Secure Google OAuth authentication and strictly isolated data access via PostgreSQL.
+### Backend Features
+- **Scheduler**: Native integration with BullMQ for precise, distributed delays (No OS/Node Cron libraries).
+- **Persistence**: Durable state management using PostgreSQL and Redis AOF ensuring zero lost emails during worker/server restarts.
+- **Rate Limiting**: Distributed, atomic hourly rate limiting per sender/campaign enforced via Redis Lua scripts. Limits can be overridden safely without dropping jobs.
+- **Concurrency**: Configurable parallel worker pool architecture utilizing strict database transaction idempotency to prevent duplicate external side-effects.
+
+### Frontend Features
+- **Login**: Secure Google OAuth authentication session flow natively supporting tenant isolation.
+- **Dashboard**: Central monitoring UI detailing registered senders, queue statuses, and Slack integration health.
+- **Compose**: Interactive multi-step campaign builder allowing seamless CSV/TXT uploads, dynamic data deduplication, and precise scheduling configuration (start time, min delays, limits).
+- **Tables**: Searchable, paginated views of *Scheduled*, *Sent*, and *Failed* emails backed by near real-time Elasticsearch indexing and a live BullMQ observability dashboard.
 
 ---
 
@@ -217,7 +222,11 @@ Copy `.env.example` to `backend/.env` and `frontend/.env`.
 | `SLACK_CLIENT_ID` / `SECRET` | Slack OAuth credentials | Yes |
 | `ETHEREAL_USER` / `PASS` | Safe SMTP testing credentials | Yes |
 
-*Note: Ethereal provides fake SMTP credentials. It intercepts emails so we can test the pipeline without spamming real inboxes.*
+### Ethereal Email Setup
+Ethereal provides fake SMTP credentials that safely intercept emails so we can test the pipeline without spamming real inboxes.
+1. Go to [ethereal.email](https://ethereal.email/)
+2. Click **"Create Ethereal Account"**
+3. Copy the generated Username and Password into your `.env` file as `ETHEREAL_USER` and `ETHEREAL_PASS`.
 
 ### Google & Slack OAuth Setup
 1. Create a Google Cloud Project, enable the OAuth Consent Screen, and create a Web Client ID. Set the Authorized Redirect URI to `http://localhost:5000/auth/google/callback`.
