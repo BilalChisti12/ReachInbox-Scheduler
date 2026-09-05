@@ -190,6 +190,13 @@ export function startWorker() {
       } catch (error: any) {
         console.error(`Failed to send email job ${emailId}:`, error.message);
         
+        // Refund the rate limit slot since this attempt failed and didn't result in a sent email
+        try {
+          await rateLimitService.refund(sender.id, emailRecord.campaign.id);
+        } catch (refundErr: any) {
+          console.error(`Failed to refund rate limit slot for job ${emailId}:`, refundErr.message);
+        }
+        
         if (job.attemptsMade + 1 >= (job.opts.attempts || 1)) {
           console.error(`Job ${emailId} has exhausted all retries. Marking as failed in DB.`);
           const failedJob = await emailJobRepo.markAsFailed(emailId, error.message);
