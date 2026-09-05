@@ -19,11 +19,10 @@ import { getEnvArray } from './config/env';
 
 const app = express();
 
-// Trust Nginx reverse proxy — required so express-session sets secure cookies correctly
-// behind a proxy (the proxy terminates HTTPS, Express sees HTTP internally)
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Trust Nginx/Render reverse proxy — required so express-session sets secure cookies correctly
+// behind a proxy (the proxy terminates HTTPS, Express sees HTTP internally).
+// We set this unconditionally to avoid issues if NODE_ENV is misconfigured.
+app.set('trust proxy', 1);
 
 // Set up Bull Board
 const serverAdapter = new ExpressAdapter();
@@ -35,8 +34,6 @@ createBullBoard({
 });
 
 // CORS — allow configured frontend origin(s)
-// In production: FRONTEND_URL=https://your-app.vercel.app
-// Supports comma-separated origins for multiple Vercel preview URLs
 const allowedOrigins = getEnvArray('FRONTEND_URL', 'http://localhost:5173');
 
 app.use(
@@ -60,9 +57,9 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Session configuration
-// Production: cookies must be secure=true and sameSite='none' because
-// the frontend (Vercel, HTTPS) and backend (Oracle, HTTPS) are on different domains.
-const isProduction = process.env.NODE_ENV === 'production';
+// If the frontend URL is not localhost, we are doing cross-domain requests.
+// We MUST set secure: true and sameSite: 'none' for the browser to send cookies cross-domain.
+const isCrossDomain = !allowedOrigins[0].includes('localhost');
 
 app.use(
   session({
@@ -72,9 +69,9 @@ app.use(
     saveUninitialized: false,
     name: 'reachinbox.sid',
     cookie: {
-      secure: isProduction,
+      secure: isCrossDomain,
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isCrossDomain ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })

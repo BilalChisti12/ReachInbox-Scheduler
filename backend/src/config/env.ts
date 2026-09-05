@@ -20,6 +20,10 @@ export const getEnv = (key: string, devFallback?: string): string => {
 export const getEnvArray = (key: string, devFallback?: string): string[] => {
     return getEnv(key, devFallback)
         .split(',')
-        .map(s => s.trim())
+        .map(s => {
+            const trimmed = s.trim();
+            // Remove trailing slash for CORS and redirect consistency
+            return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+        })
         .filter(Boolean);
 };
