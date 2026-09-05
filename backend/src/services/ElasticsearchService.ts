@@ -97,7 +97,7 @@ export class ElasticsearchService {
       await esClient.delete({
         index: this.INDEX_NAME,
         id: id,
-        refresh: 'true'
+        refresh: true
       });
     } catch (error: any) {
       if (error.meta?.statusCode !== 404) {
