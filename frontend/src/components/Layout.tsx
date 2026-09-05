@@ -14,7 +14,7 @@ export const Layout: React.FC = () => {
       const res = await apiClient.get('/api/emails/stats');
       return res.data;
     },
-    refetchInterval: 30000,
+    refetchInterval: 3000,
   });
 
   const navItems = [

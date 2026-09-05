@@ -44,7 +44,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
       const res = await apiClient.get<SearchResult>(`/api/emails/search?${params.toString()}`);
       return res.data;
     },
-    refetchInterval: 30000,
+    refetchInterval: 3000,
   });
 
   const formatTime = (dateString?: string | null) => {
