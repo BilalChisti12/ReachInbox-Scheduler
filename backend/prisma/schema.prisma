@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(uuid())
+  googleId         String?           @unique
+  name             String?
+  email            String            @unique
+  passwordHash     String?
+  avatar           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  isPlatformAdmin  Boolean           @default(false)
+  senders          Sender[]
+  campaigns        Campaign[]
+  emailJobs        EmailJob[]
+  slackConnection  SlackConnection?
+}
+
+model Sender {
+  id           String     @id @default(uuid())
+  userId       String
+  email        String
+  displayName  String?
+  smtpHost     String
+  smtpPort     Int
+  smtpUsername String
+  smtpPassword String
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns    Campaign[]
+  emailJobs    EmailJob[]
+
+  @@index([userId])
+}
+
+enum CampaignStatus {
+  scheduled
+  processing
+  completed
+  partially_failed
+  failed
+}
+
+model Campaign {
+  id                 String         @id @default(uuid())
+  userId             String
+  senderId           String
+  subject            String
+  body               String         @db.Text
+  startTime          DateTime
+  delayBetweenEmails Int            // in milliseconds
+  hourlyLimit        Int
+  totalRecipients    Int            @default(0)
+  scheduledCount     Int            @default(0)
+  sentCount          Int            @default(0)
+  failedCount        Int            @default(0)
+  status             CampaignStatus @default(scheduled)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender             Sender         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  emailJobs          EmailJob[]
+  attachments        Attachment[]
+
+  @@index([userId])
+  @@index([senderId])
+}
+
+model Attachment {
+  id          String   @id @default(uuid())
+  campaignId  String
+  filename    String
+  content     String   @db.Text
+  contentType String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+enum EmailStatus {
+  scheduled
+  processing
+  sent
+  failed
+}
+
+model EmailJob {
+  id             String      @id @default(uuid())
+  campaignId     String
+  userId         String
+  senderId       String
+  recipient      String
+  subject        String
+  body           String      @db.Text
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  status         EmailStatus @default(scheduled)
+  failureReason  String?     @db.Text
+  bullmqJobId    String?     // Nullable initially until job is actually created
+  messageId      String?     // Persisted SMTP message ID (for Phase 7 auditing)
+  idempotencyKey String      @unique
+  attemptCount   Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  campaign       Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender         Sender      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([userId])
+  @@index([senderId])
+  @@index([status])
+}
+
+model SlackConnection {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  slackTeamId       String?
+  slackTeamName     String?
+  accessToken       String   // Securely stored credential
+  connected         Boolean  @default(true)
+  selectedChannelId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

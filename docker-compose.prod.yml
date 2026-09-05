@@ -1,0 +1,203 @@
+# =============================================================================
+# Production Docker Compose — ReachInbox Email Job Scheduler
+#
+# Usage on Oracle VM:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Services:
+#   postgres       — PostgreSQL database (internal only, NOT internet-accessible)
+#   redis          — Redis for BullMQ + rate limiting (internal only)
+#   elasticsearch  — Elasticsearch for email search (internal only)
+#   api            — Express API server (internal, exposed via nginx only)
+#   worker         — BullMQ email worker (internal only)
+#   nginx          — Reverse proxy (PUBLIC: ports 80 + 443)
+#
+# All internal services communicate on the 'reachinbox_network' Docker network.
+# Only Nginx is reachable from the internet.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — relational database (source of truth)
+  # Data is stored in a named Docker volume (persists across restarts)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: reachinbox_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-reachinbox_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reachinbox_password}
+      POSTGRES_DB: ${POSTGRES_DB:-reachinbox}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reachinbox_user} -d ${POSTGRES_DB:-reachinbox}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # NOT exposed to the internet
+
+  # ---------------------------------------------------------------------------
+  # Redis — BullMQ queue persistence + atomic rate limiting
+  # appendonly yes = write-ahead log (survives container restart)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: reachinbox_redis
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # NOT exposed to the internet
+
+  # ---------------------------------------------------------------------------
+  # Elasticsearch — email search index
+  # Image 8.11.0 supports both linux/amd64 (x86) and linux/arm64 (Oracle Ampere)
+  # Memory reduced to 256MB for Oracle Always Free VM (1GB total RAM shared)
+  # ---------------------------------------------------------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: reachinbox_es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - cluster.name=reachinbox
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    # NOT exposed to the internet
+
+  # ---------------------------------------------------------------------------
+  # API — Express REST API
+  # Built from backend/Dockerfile (multi-stage, production Node)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reachinbox_api
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachinbox_user}:${POSTGRES_PASSWORD:-reachinbox_password}@postgres:5432/${POSTGRES_DB:-reachinbox}
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    command: ["node", "dist/server.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # NOT exposed to internet — only accessible via nginx
+
+  # ---------------------------------------------------------------------------
+  # Worker — BullMQ email processing worker (separate container from API)
+  #
+  # CRITICAL: This is a separate process from the API.
+  # - Restarting the API does not stop email processing
+  # - Restarting the worker does not affect the API
+  # - Delayed jobs persist in Redis and resume after worker restarts
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reachinbox_worker
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachinbox_user}:${POSTGRES_PASSWORD:-reachinbox_password}@postgres:5432/${POSTGRES_DB:-reachinbox}
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Nginx — reverse proxy (the ONLY service exposed to the internet)
+  # Handles: HTTPS termination, HTTP->HTTPS redirect, Let's Encrypt
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: reachinbox_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Let's Encrypt certificates (certbot creates these on the host)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Certbot webroot for HTTP-01 challenge (certificate renewal)
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - reachinbox_network
+    restart: unless-stopped
+
+# =============================================================================
+# Named volumes — data survives container restarts and VM reboots
+# =============================================================================
+volumes:
+  postgres_data:
+    name: reachinbox_postgres_data
+  redis_data:
+    name: reachinbox_redis_data
+  es_data:
+    name: reachinbox_es_data
+
+# =============================================================================
+# Internal Docker network — services address each other by name
+# e.g. postgres:5432, redis:6379, elasticsearch:9200, api:5000
+# =============================================================================
+networks:
+  reachinbox_network:
+    name: reachinbox_network
+    driver: bridge
