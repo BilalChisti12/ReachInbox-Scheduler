@@ -18,6 +18,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['emailStats'] });
     }
   });
 
@@ -28,6 +29,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
     onSuccess: () => {
       setSelectedEmails(new Set());
       queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['emailStats'] });
     }
   });
 
