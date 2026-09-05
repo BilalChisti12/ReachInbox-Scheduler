@@ -11,7 +11,7 @@ export const Settings: React.FC = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileName, setProfileName] = useState(user?.name || '');
-  const [profileMessage, setProfileMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const { data: slackStatus, isLoading: isCheckingSlack } = useQuery({
     queryKey: ['slackStatus'],
@@ -22,12 +22,7 @@ export const Settings: React.FC = () => {
   });
 
   const handleConnectSlack = () => {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) {
-      alert("Configuration Error: The backend API URL is missing. Please add VITE_API_URL in your Vercel project settings.");
-      return;
-    }
-    window.location.href = `${apiUrl}/api/slack/auth`;
+    window.location.href = `${getApiUrl()}/api/slack/auth`;
   };
 
   const handleDisconnectSlack = async () => {
@@ -35,14 +30,14 @@ export const Settings: React.FC = () => {
     try {
       await apiClient.post('/api/slack/disconnect');
       await queryClient.invalidateQueries({ queryKey: ['slackStatus'] });
-      
+
       // Clean up URL if it has the query param
       const url = new URL(window.location.href);
       if (url.searchParams.has('slack')) {
         url.searchParams.delete('slack');
         window.history.replaceState({}, '', url);
       }
-      
+
       alert('Slack disconnected successfully');
     } catch (err) {
       alert('Failed to disconnect Slack');
@@ -111,7 +106,7 @@ export const Settings: React.FC = () => {
               />
               <p className="text-xs text-slate-500 mt-2">Email addresses cannot be changed.</p>
             </div>
-            
+
             <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={handleUpdateProfile}
@@ -121,7 +116,7 @@ export const Settings: React.FC = () => {
                 {isUpdatingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
                 Save Changes
               </button>
-              
+
               {profileMessage && (
                 <p className={`text-sm font-medium ${profileMessage.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
                   {profileMessage.text}
