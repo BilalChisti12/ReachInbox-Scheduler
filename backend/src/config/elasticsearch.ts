@@ -1,4 +1,4 @@
-import { Client } from '@elastic/elasticsearch';
+import { Client } from '@opensearch-project/opensearch';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,10 +14,6 @@ const auth = esUsername && esPassword
 const esClient = new Client({
   node: esUrl,
   auth,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  }
 });
 
 export default esClient;

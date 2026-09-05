@@ -24,21 +24,23 @@ export class ElasticsearchService {
       if (!indexExists) {
         await esClient.indices.create({
           index: this.INDEX_NAME,
-          mappings: {
-            properties: {
-              id: { type: 'keyword' },
-              userId: { type: 'keyword' },
-              campaignId: { type: 'keyword' },
-              senderId: { type: 'keyword' },
-              sender: { type: 'keyword' },
-              recipient: { type: 'text', fields: { keyword: { type: 'keyword' } } },
-              subject: { type: 'text' },
-              body: { type: 'text' },
-              status: { type: 'keyword' },
-              scheduledAt: { type: 'date' },
-              sentAt: { type: 'date' },
-              createdAt: { type: 'date' },
-              updatedAt: { type: 'date' }
+          body: {
+            mappings: {
+              properties: {
+                id: { type: 'keyword' },
+                userId: { type: 'keyword' },
+                campaignId: { type: 'keyword' },
+                senderId: { type: 'keyword' },
+                sender: { type: 'keyword' },
+                recipient: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+                subject: { type: 'text' },
+                body: { type: 'text' },
+                status: { type: 'keyword' },
+                scheduledAt: { type: 'date' },
+                sentAt: { type: 'date' },
+                createdAt: { type: 'date' },
+                updatedAt: { type: 'date' }
+              }
             }
           }
         });
@@ -63,7 +65,7 @@ export class ElasticsearchService {
       await esClient.index({
         index: this.INDEX_NAME,
         id: emailJob.id,
-        document: {
+        body: {
           id: emailJob.id,
           userId: emailJob.userId,
           campaignId: emailJob.campaignId,
@@ -142,22 +144,23 @@ export class ElasticsearchService {
         index: this.INDEX_NAME,
         from,
         size: limit,
-        query: {
-          bool: {
-            must
-          }
-        },
-        sort: [
-          { createdAt: { order: 'desc' } }
-        ]
+        body: {
+          query: {
+            bool: {
+              must
+            }
+          },
+          sort: [
+            { createdAt: { order: 'desc' } }
+          ]
+        }
       });
 
-      const hits = result.hits.hits.map(hit => hit._source);
+      const hits = result.body.hits.hits.map((hit: any) => hit._source);
       
-      // Total could be an object or number depending on ES version, safely unwrap it
-      const total = typeof result.hits.total === 'number' 
-        ? result.hits.total 
-        : (result.hits.total as any)?.value || 0;
+      const total = typeof result.body.hits.total === 'number' 
+        ? result.body.hits.total 
+        : (result.body.hits.total as any)?.value || 0;
 
       return {
         data: hits,
