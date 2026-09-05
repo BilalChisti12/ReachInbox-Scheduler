@@ -71,7 +71,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
         <div className="relative flex-1 max-w-3xl flex items-center gap-4">
           <input 
              type="checkbox"
-             checked={data?.data?.length > 0 && selectedEmails.size === data.data.length}
+             checked={Boolean(data?.data?.length) && data!.data!.length > 0 && selectedEmails.size === data!.data!.length}
              onChange={handleSelectAll}
              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
           />
