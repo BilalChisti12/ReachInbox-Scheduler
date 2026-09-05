@@ -19,7 +19,8 @@ export class ElasticsearchService {
    */
   async initIndex() {
     try {
-      const indexExists = await esClient.indices.exists({ index: this.INDEX_NAME });
+      const response = await esClient.indices.exists({ index: this.INDEX_NAME });
+      const indexExists = response.body;
       
       if (!indexExists) {
         await esClient.indices.create({
