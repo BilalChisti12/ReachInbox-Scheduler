@@ -20,7 +20,7 @@ const notificationDeduplication = new NotificationDeduplicationService();
 
 export function startWorker() {
   const envConcurrency = Number(process.env.WORKER_CONCURRENCY) || 5;
-  const concurrency = Math.min(envConcurrency, 2); // Cap at 2 to strictly prevent Ethereal timeout
+  const concurrency = Math.min(envConcurrency, 1); // Strictly cap at 1 to completely avoid Ethereal timeout
   
   console.log(`Starting Email Worker with concurrency: ${concurrency}`);
 

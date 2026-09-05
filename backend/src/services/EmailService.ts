@@ -10,9 +10,6 @@ export class EmailService {
   private getTransporter(sender: Sender): nodemailer.Transporter {
     if (!this.transporters.has(sender.id)) {
       const transporter = nodemailer.createTransport({
-        pool: true,
-        maxConnections: 2, // Limit concurrent connections to prevent timeouts on Ethereal/free SMTP
-        maxMessages: 100,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 15000,
