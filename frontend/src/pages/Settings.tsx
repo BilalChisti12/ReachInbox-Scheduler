@@ -55,7 +55,7 @@ export const Settings: React.FC = () => {
 
     setIsUpdatingProfile(true);
     try {
-      await apiClient.patch('/api/auth/profile', { name: profileName.trim() });
+      await apiClient.patch('/auth/profile', { name: profileName.trim() });
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setProfileMessage({ type: 'success', text: 'Profile updated successfully' });
       setTimeout(() => setProfileMessage(null), 3000);
