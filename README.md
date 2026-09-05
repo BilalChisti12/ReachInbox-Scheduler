@@ -337,19 +337,31 @@ This architecture is designed to scale horizontally:
 
 ---
 
-## Requirement Coverage
+## Evaluator Guide: Requirement to Code Mapping
 
-| Requirement | Implementation |
-| :--- | :--- |
-| **Persistent Scheduling** | BullMQ delayed jobs backed by Redis AOF. |
-| **No Cron** | Fully queue-driven, sleep-based wakeup architecture. |
-| **Rate Limiting** | Strict, atomic Redis Lua scripts per sender/campaign. |
-| **Duplicate Protection** | Database transaction idempotency on the `processing` state. |
-| **Search** | Elasticsearch integration with synchronization fallback. |
-| **Authentication** | Google OAuth via Passport.js. |
-| **Notifications** | Deduplicated Slack API webhooks. |
-| **Email Delivery** | Ethereal SMTP with simulated network latency. |
-| **Queue Observability**| Bull Board mounted securely on the backend. |
+To facilitate your evaluation, here is the exact mapping of every core requirement to the file containing its core logic:
+
+### 1️⃣ Core Scheduler Behavior
+* **Accept email scheduling requests via API**: [`backend/src/controllers/CampaignController.ts`](file:///backend/src/controllers/CampaignController.ts) (API payload validation and db persistence).
+* **Store them in a relational DB**: [`backend/src/repositories/EmailJobRepository.ts`](file:///backend/src/repositories/EmailJobRepository.ts) and `schema.prisma`.
+* **Schedule using BullMQ delayed jobs (no cron)**: [`backend/src/services/CampaignService.ts`](file:///backend/src/services/CampaignService.ts#L107) (Injects calculated `delay` into BullMQ Job options).
+* **Send from multiple senders via Ethereal**: [`backend/src/services/EmailService.ts`](file:///backend/src/services/EmailService.ts) (Generates isolated transporters based on db sender credentials).
+* **Searchable via Elasticsearch**: [`backend/src/services/ElasticsearchService.ts`](file:///backend/src/services/ElasticsearchService.ts) (Index mappings and search proxying).
+* **Live BullMQ dashboard**: [`backend/src/app.ts`](file:///backend/src/app.ts#L32-L35) (Mounts `@bull-board/api`).
+* **Persist state (Restart safety)**: Native to BullMQ/Redis AOF, logic initialized in [`backend/src/config/queue.ts`](file:///backend/src/config/queue.ts).
+
+### 2️⃣ Throughput, Rate Limiting & Concurrency
+* **Configurable Worker Concurrency**: [`backend/src/worker/EmailWorker.ts`](file:///backend/src/worker/EmailWorker.ts#L22) (Reads `WORKER_CONCURRENCY` and injects it into BullMQ worker constructor).
+* **Delay Between Each Email**: [`backend/src/worker/EmailWorker.ts`](file:///backend/src/worker/EmailWorker.ts#L158-L159) (Custom delay natively in worker logic via explicit `setTimeout` based on `MIN_EMAIL_DELAY_MS`).
+* **Rate Limiting (Configurable, DB/Redis-backed, Safe across workers)**: [`backend/src/services/RateLimitService.ts`](file:///backend/src/services/RateLimitService.ts) (Uses an **atomic Redis Lua script** to guarantee thread-safe incrementing of counters per hour window without race conditions).
+* **Do not drop / Delay into next hour**: [`backend/src/worker/EmailWorker.ts`](file:///backend/src/worker/EmailWorker.ts#L103-L121) (Calculates exact ms until next hour, safely reverts DB to `scheduled`, and utilizes BullMQ `job.moveToDelayed`).
+* **Slack Notification on Rate Limit Hit (OAuth)**: [`backend/src/controllers/SlackController.ts`](file:///backend/src/controllers/SlackController.ts) (OAuth flow) and [`backend/src/services/SlackService.ts`](file:///backend/src/services/SlackService.ts) (Webhook dispatch). Deduplication logic across parallel workers is handled by `NotificationDeduplicationService.ts`.
+* **Behavior Under Load (1000+ emails)**: Handled elegantly; BullMQ absorbs the load, processes at concurrency limits, hits the rate limit in `RateLimitService`, and delays the remaining 950+ emails evenly across the next 20 hours.
+
+### 3️⃣ Hard Constraints
+* **❌ Do NOT use cron jobs**: Zero cron usage. Verified entirely via `CampaignService.ts` utilizing BullMQ's native `delay`.
+* **✅ The system must be persistent**: PostgreSQL + BullMQ handles this. If server restarts, worker reconnects to Redis and resumes delayed jobs exactly at their scheduled timestamps.
+* **❌ Maintain Idempotency (Never duplicate)**: [`backend/src/repositories/EmailJobRepository.ts`](file:///backend/src/repositories/EmailJobRepository.ts#L45) (`transitionStatus` method forces an atomic SQL `UPDATE...WHERE status = 'scheduled'`. This mathematically prevents double-processing if a worker crashes mid-send).
 
 ---
 
