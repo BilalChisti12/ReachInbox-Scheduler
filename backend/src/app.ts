@@ -14,9 +14,30 @@ import { requirePlatformAdmin } from './middleware/requirePlatformAdmin';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { emailQueue, redisConnection } from './config/queue';
+import { emailQueue, redisConnection, createBullConnection } from './config/queue';
 import RedisStore from 'connect-redis';
 import { getEnvArray } from './config/env';
+import { QueueEvents } from 'bullmq';
+import { EmailJobRepository } from './repositories/EmailJobRepository';
+import { ElasticsearchService } from './services/ElasticsearchService';
+
+// Initialize two-way synchronization from Bull Board -> Database/Elasticsearch
+const queueEvents = new QueueEvents('email-scheduler', { connection: createBullConnection() });
+const emailJobSyncRepo = new EmailJobRepository();
+const elasticSyncService = new ElasticsearchService();
+
+queueEvents.on('removed', async ({ jobId }) => {
+  if (jobId && jobId.startsWith('email-job-')) {
+    const id = jobId.replace('email-job-', '');
+    try {
+      await emailJobSyncRepo.deleteById(id);
+      await elasticSyncService.deleteEmail(id);
+      console.log(`Successfully synced Bull Board deletion for job ${id}`);
+    } catch (err: any) {
+      console.error(`Failed to sync Bull Board deletion for job ${id}:`, err.message);
+    }
+  }
+});
 
 const app = express();
 
