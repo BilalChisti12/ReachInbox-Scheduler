@@ -15,6 +15,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { emailQueue, redisConnection } from './config/queue';
 import { RedisStore } from 'connect-redis';
+import { getEnvArray } from './config/env';
 
 const app = express();
 
@@ -36,10 +37,7 @@ createBullBoard({
 // CORS — allow configured frontend origin(s)
 // In production: FRONTEND_URL=https://your-app.vercel.app
 // Supports comma-separated origins for multiple Vercel preview URLs
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const allowedOrigins = getEnvArray('FRONTEND_URL', 'http://localhost:5173');
 
 app.use(
   cors({

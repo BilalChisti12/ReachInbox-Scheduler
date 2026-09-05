@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Hash, Server, Shield, ExternalLink, Loader2, User as UserIcon, Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
+import { getApiUrl } from '../config/env';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Settings: React.FC = () => {
@@ -21,7 +22,7 @@ export const Settings: React.FC = () => {
   });
 
   const handleConnectSlack = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/slack/auth`;
+    window.location.href = `${getApiUrl()}/api/slack/auth`;
   };
 
   const handleDisconnectSlack = async () => {
@@ -179,7 +180,7 @@ export const Settings: React.FC = () => {
           <div className="p-6 bg-slate-50 flex items-center justify-between">
             <p className="text-sm text-slate-600">Restricted to platform administrators only.</p>
             <a
-              href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/admin/queues`}
+              href={`${getApiUrl()}/admin/queues`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors font-medium text-sm shadow-sm"

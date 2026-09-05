@@ -2,6 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { UserRepository } from '../repositories/UserRepository';
 import dotenv from 'dotenv';
+import { getEnv } from './env';
 
 dotenv.config();
 
@@ -9,7 +10,8 @@ const userRepository = new UserRepository();
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID || 'mock_client_id';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || 'mock_client_secret';
-const callbackURL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/auth/google/callback';
+// Determine callback URL based on environment (development vs production)
+const callbackURL = getEnv('GOOGLE_CALLBACK_URL', 'http://localhost:5000/auth/google/callback');
 
 passport.use(
   new GoogleStrategy(

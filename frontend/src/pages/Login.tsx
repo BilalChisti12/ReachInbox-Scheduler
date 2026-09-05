@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../config/env';
 import { apiClient } from '../api/client';
 import { Loader2 } from 'lucide-react';
 
@@ -31,7 +32,7 @@ export const Login: React.FC = () => {
   });
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`;
+    window.location.href = `${getApiUrl()}/auth/google`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
