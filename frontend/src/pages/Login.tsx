@@ -32,7 +32,12 @@ export const Login: React.FC = () => {
   });
 
   const handleGoogleLogin = () => {
-    window.location.href = `${getApiUrl()}/auth/google`;
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      alert("Configuration Error: The backend API URL is missing. Please add VITE_API_URL in your Vercel project settings.");
+      return;
+    }
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

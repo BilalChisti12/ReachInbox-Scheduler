@@ -12,6 +12,7 @@ export const getApiUrl = (): string => {
         return 'http://localhost:5000';
     }
 
-    // Fail loudly in Vercel production instead of silently routing API calls to localhost
-    throw new Error("CRITICAL CONFIGURATION ERROR: 'VITE_API_URL' environment variable is missing in Vercel production!");
+    // Log the error but don't throw, otherwise React crashes and shows a blank white page.
+    console.error("CRITICAL CONFIGURATION ERROR: 'VITE_API_URL' environment variable is missing in Vercel production!");
+    return '';
 };

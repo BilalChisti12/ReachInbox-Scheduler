@@ -22,7 +22,12 @@ export const Settings: React.FC = () => {
   });
 
   const handleConnectSlack = () => {
-    window.location.href = `${getApiUrl()}/api/slack/auth`;
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      alert("Configuration Error: The backend API URL is missing. Please add VITE_API_URL in your Vercel project settings.");
+      return;
+    }
+    window.location.href = `${apiUrl}/api/slack/auth`;
   };
 
   const handleDisconnectSlack = async () => {
