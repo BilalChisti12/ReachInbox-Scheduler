@@ -18,6 +18,8 @@ if (redisUrl.includes('upstash.io')) {
 
 export const redisConnection = new Redis(redisUrl, redisOptions);
 
+export const createBullConnection = () => new Redis(redisUrl, redisOptions);
+
 export const emailQueue = new Queue('email-scheduler', {
-  connection: redisConnection,
+  connection: createBullConnection(),
 });

@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { redisConnection } from '../config/queue';
+import { redisConnection, createBullConnection } from '../config/queue';
 import { EmailJobRepository } from '../repositories/EmailJobRepository';
 import { EmailService } from '../services/EmailService';
 import { RateLimitService } from '../services/RateLimitService';
@@ -214,7 +214,7 @@ export function startWorker() {
       }
     },
     {
-      connection: redisConnection,
+      connection: createBullConnection(),
       concurrency,
     }
   );
