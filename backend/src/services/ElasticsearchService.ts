@@ -47,7 +47,10 @@ export class ElasticsearchService {
         console.log(`Elasticsearch index '${this.INDEX_NAME}' already exists.`);
       }
     } catch (error: any) {
-      console.error(`Failed to initialize Elasticsearch index: ${error.message}`);
+      console.error(`Failed to initialize Elasticsearch index. Error:`, JSON.stringify(error, null, 2));
+      if (error.message) {
+        console.error(`Message: ${error.message}`);
+      }
     }
   }
 
