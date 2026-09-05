@@ -13,6 +13,8 @@ export class EmailService {
         pool: true,
         maxConnections: 1, // Strictly 1 persistent connection to avoid TIME_WAIT socket exhaustion
         maxMessages: Infinity,
+        rateDelta: 2000, // Time window for rate limit in ms (2 seconds)
+        rateLimit: 1,    // Max 1 message per rateDelta to completely prevent Ethereal burst bans
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 15000,
