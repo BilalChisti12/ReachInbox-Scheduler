@@ -89,7 +89,11 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
         <div className="flex items-center gap-5 text-slate-400">
           {selectedEmails.size > 0 && (
             <button 
-              onClick={() => bulkDeleteMutation.mutate(Array.from(selectedEmails))}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete ${selectedEmails.size} selected email(s)? This action cannot be undone.`)) {
+                  bulkDeleteMutation.mutate(Array.from(selectedEmails));
+                }
+              }}
               disabled={bulkDeleteMutation.isPending}
               className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
             >
@@ -181,7 +185,11 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
                   onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
                 >
                   <button 
-                    onClick={() => deleteMutation.mutate(email.id)}
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to delete this email? This action cannot be undone.")) {
+                        deleteMutation.mutate(email.id);
+                      }
+                    }}
                     disabled={deleteMutation.isPending && deleteMutation.variables === email.id}
                     className="hover:text-red-500 transition-colors"
                   >
