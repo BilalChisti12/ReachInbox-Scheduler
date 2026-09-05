@@ -13,6 +13,9 @@ export class EmailService {
         pool: true,
         maxConnections: 2, // Limit concurrent connections to prevent timeouts on Ethereal/free SMTP
         maxMessages: 100,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
         host: sender.smtpHost,
         port: sender.smtpPort,
         secure: sender.smtpPort === 465,
