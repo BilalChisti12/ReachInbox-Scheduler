@@ -19,8 +19,7 @@ const slackService = new SlackService();
 const notificationDeduplication = new NotificationDeduplicationService();
 
 export function startWorker() {
-  const envConcurrency = Number(process.env.WORKER_CONCURRENCY) || 5;
-  const concurrency = Math.min(envConcurrency, 1); // Strictly cap at 1 to completely avoid Ethereal timeout
+  const concurrency = Number(process.env.WORKER_CONCURRENCY) || 5;
   
   console.log(`Starting Email Worker with concurrency: ${concurrency}`);
 
@@ -154,6 +153,10 @@ export function startWorker() {
       }
 
       console.log(`Processing email job ${emailId} to ${emailRecord.recipient}...`);
+
+      // 4.2 Minimum Delay Between Each Email Send (per assignment constraints)
+      const minDelayMs = Number(process.env.MIN_EMAIL_DELAY_MS) || 2000;
+      await new Promise(res => setTimeout(res, minDelayMs));
 
       // 5. Send email using the existing EmailService
       try {

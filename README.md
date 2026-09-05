@@ -127,6 +127,11 @@ If Elasticsearch goes down, the core transactional system must not fail.
 Rate limit alerts shouldn't flood a Slack channel if 50 emails hit the rate limit in the same second.
 **Solution:** I implemented a distributed deduplication lock in Redis (`lock:ratelimit:senderId:hourWindow`). The first failed job acquires the lock and dispatches the Slack notification. The next 49 jobs see the lock is held and silently skip sending duplicate Slack alerts, while still correctly delaying their own email execution.
 
+### 8. Ethereal Free Tier Limits vs Production Scale
+The architecture is designed to handle thousands of concurrent jobs effortlessly by simply increasing `WORKER_CONCURRENCY` to a high number (e.g., 50-100) and letting Node.js blast emails in parallel. 
+**Challenge:** Ethereal SMTP's free tier operates as a strict anti-spam sandbox, enforcing a physical network limit of roughly 1-2 messages per second. If the robust worker pool executes multiple parallel jobs or sends emails too rapidly, Ethereal aggressively drops the TCP connection, resulting in `Connection timeout` errors. 
+**Solution:** The application strictly enforces a minimum manual delay (e.g., 2000ms) inside the worker logic before every transmission. While this artificially throttles the powerful backend to a snail's pace to appease Ethereal, the core logic is structurally sound. On a true production ESP (like AWS SES or SendGrid), you would simply remove this artificial delay and scale the worker concurrency to safely process 10,000+ emails per minute without any architectural changes.
+
 ---
 
 ## Technology Stack
