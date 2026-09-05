@@ -16,10 +16,17 @@ router.get(
 // Google OAuth callback
 router.get(
   '/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res, next) => {
+    // Determine the frontend URL (taking the first if it's a comma-separated list)
+    const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+    const frontendUrl = frontendUrls[0].trim();
+    
+    passport.authenticate('google', { failureRedirect: `${frontendUrl}/login?error=oauth_failed` })(req, res, next);
+  },
   (req: Request, res: Response) => {
     // On successful login, redirect to frontend scheduled inbox
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+    const frontendUrl = frontendUrls[0].trim();
     res.redirect(`${frontendUrl}/scheduled`);
   }
 );
@@ -47,7 +54,7 @@ router.post('/logout', (req: Request, res: Response, next) => {
       return next(err);
     }
     req.session.destroy(() => {
-      res.clearCookie('connect.sid'); // Assuming default connect.sid session cookie name
+      res.clearCookie('reachinbox.sid'); // Must match the name set in app.ts
       res.json({ success: true, message: 'Logged out successfully' });
     });
   });
