@@ -85,8 +85,10 @@ export function startWorker() {
       }
 
       // 4.1. Rate Limit Check (using Atomic Lua Script)
-      const senderLimit = Number(process.env.MAX_EMAILS_PER_HOUR) || 200;
+      const globalSenderLimit = Number(process.env.MAX_EMAILS_PER_HOUR) || 200;
       const campaignLimit = emailRecord.campaign.hourlyLimit;
+      // If the user specified a custom campaign limit that exceeds the global default, allow it to override the sender limit
+      const senderLimit = Math.max(globalSenderLimit, campaignLimit);
 
       console.log(`Checking rate limit for Sender: ${sender.id} (Limit: ${senderLimit}), Campaign: ${emailRecord.campaign.id} (Limit: ${campaignLimit})`);
       

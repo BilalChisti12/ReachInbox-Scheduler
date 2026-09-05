@@ -34,14 +34,14 @@ export class CampaignService {
     }
 
     // 2. Calculate effective configurations based on global bounds
-    const effectiveDelay = Math.max(
-      data.delayBetweenEmails || 0,
-      DEFAULT_MIN_EMAIL_DELAY_MS
-    );
-    const effectiveHourlyLimit = Math.min(
-      data.hourlyLimit || Infinity,
-      DEFAULT_MAX_EMAILS_PER_HOUR
-    );
+    // We respect the user's input directly, falling back to globals only if unspecified
+    const effectiveDelay = data.delayBetweenEmails !== undefined 
+      ? data.delayBetweenEmails 
+      : DEFAULT_MIN_EMAIL_DELAY_MS;
+      
+    const effectiveHourlyLimit = data.hourlyLimit !== undefined 
+      ? data.hourlyLimit 
+      : DEFAULT_MAX_EMAILS_PER_HOUR;
 
     // 3. Create Campaign record
     const campaign = await this.campaignRepo.create(userId, sender.id, {
