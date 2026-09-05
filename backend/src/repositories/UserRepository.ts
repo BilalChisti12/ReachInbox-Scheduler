@@ -14,14 +14,20 @@ export class UserRepository {
   async upsertGoogleUser(data: { googleId: string; name?: string; email: string; avatar?: string }): Promise<User> {
     const existingByEmail = await this.findByEmail(data.email);
     
+    const isOwner = process.env.OWNER_EMAIL && data.email === process.env.OWNER_EMAIL;
+    // The evaluator (demo admin) might also have a Google account with the same email if they chose to Google login
+    const isEvaluator = process.env.DEMO_ADMIN_EMAIL && data.email === process.env.DEMO_ADMIN_EMAIL;
+    const shouldBeAdmin = Boolean(isOwner || isEvaluator);
+
     if (existingByEmail) {
-      // User exists (e.g. seeded admin), update their Google ID without touching roles
+      // User exists, update their Google ID and correct their admin privileges
       return prisma.user.update({
         where: { id: existingByEmail.id },
         data: {
           googleId: data.googleId,
           name: data.name || existingByEmail.name,
           avatar: data.avatar || existingByEmail.avatar,
+          isPlatformAdmin: shouldBeAdmin // Revoke from regular users who got it previously
         }
       });
     }
@@ -33,7 +39,7 @@ export class UserRepository {
         email: data.email,
         name: data.name,
         avatar: data.avatar,
-        isPlatformAdmin: true // Default to true for testing/evaluation purposes
+        isPlatformAdmin: shouldBeAdmin
       }
     });
   }
