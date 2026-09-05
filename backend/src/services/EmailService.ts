@@ -2,7 +2,30 @@ import nodemailer from 'nodemailer';
 import { Sender } from '@prisma/client';
 
 export class EmailService {
-  
+  private transporters: Map<string, nodemailer.Transporter> = new Map();
+
+  /**
+   * Gets or creates a cached, pooled transporter for the sender to prevent connection timeouts.
+   */
+  private getTransporter(sender: Sender): nodemailer.Transporter {
+    if (!this.transporters.has(sender.id)) {
+      const transporter = nodemailer.createTransport({
+        pool: true,
+        maxConnections: 2, // Limit concurrent connections to prevent timeouts on Ethereal/free SMTP
+        maxMessages: 100,
+        host: sender.smtpHost,
+        port: sender.smtpPort,
+        secure: sender.smtpPort === 465,
+        auth: {
+          user: sender.smtpUsername,
+          pass: sender.smtpPassword,
+        }
+      });
+      this.transporters.set(sender.id, transporter);
+    }
+    return this.transporters.get(sender.id)!;
+  }
+
   /**
    * Dispatches an email using the provided Sender's SMTP credentials.
    * Returns metadata including the Ethereal preview URL if available.
@@ -15,15 +38,7 @@ export class EmailService {
     attachments: Array<{ filename: string, content: string, contentType: string }> = [],
     messageId?: string
   ) {
-    const transporter = nodemailer.createTransport({
-      host: sender.smtpHost,
-      port: sender.smtpPort,
-      secure: sender.smtpPort === 465,
-      auth: {
-        user: sender.smtpUsername,
-        pass: sender.smtpPassword,
-      }
-    });
+    const transporter = this.getTransporter(sender);
 
     try {
       const formattedAttachments = attachments.map(att => {
