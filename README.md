@@ -2,6 +2,13 @@
 
 A production-grade, distributed email scheduling platform engineered for reliability, concurrency control, and resilience. 
 
+> [!IMPORTANT]
+> **Evaluator Admin Access**
+> Please use the following credentials to log in. Administrator access has been exclusively granted to this account, which is required to access the live BullMQ observability dashboard (`/admin/queues`).
+> 
+> **Email:** `evaluator@outboxlabs.com`
+> **Password:** `specialAdmin@12`
+
 ## Table of Contents
 1. [What I Built](#what-i-built)
 2. [Core Capabilities](#core-capabilities)
