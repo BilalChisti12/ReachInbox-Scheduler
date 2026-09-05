@@ -45,7 +45,11 @@ app.use(
       // Allow requests with no origin (e.g. server-to-server, curl, mobile apps)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
+      
+      // Do NOT pass an Error to the callback, otherwise it causes a 500 Internal Server Error
+      // for regular GET navigation requests (like OAuth redirects) that happen to send an Origin header.
+      // Passing (null, false) simply omits the CORS headers, correctly failing XHR but allowing navigation.
+      callback(null, false);
     },
     credentials: true, // Required to send/receive session cookies cross-origin
   })
@@ -100,6 +104,16 @@ app.get('/api/protected-test', requireAuth, (req: express.Request, res: express.
     message: 'You have accessed a protected resource successfully.',
     tenantId: req.user!.id,
     userEmail: req.user!.email,
+  });
+});
+
+// Global error handler to help debug production 500 errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message || 'Unknown error',
+    stack: err.stack || 'No stack trace' // Exposing temporarily for debugging
   });
 });
 
