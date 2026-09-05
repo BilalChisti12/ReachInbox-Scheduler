@@ -8,6 +8,7 @@ import senderRoutes from './routes/senders';
 import campaignRoutes from './routes/campaigns';
 import emailRoutes from './routes/emails';
 import slackRoutes from './routes/slack';
+import adminRoutes from './routes/admin';
 import { requireAuth } from './middleware/requireAuth';
 import { requirePlatformAdmin } from './middleware/requirePlatformAdmin';
 import { createBullBoard } from '@bull-board/api';
@@ -87,6 +88,7 @@ app.use('/api/senders', requireAuth, senderRoutes);
 app.use('/api/campaigns', requireAuth, campaignRoutes);
 app.use('/api/emails', requireAuth, emailRoutes);
 app.use('/api/slack', slackRoutes);
+app.use('/api/admin', requirePlatformAdmin, adminRoutes);
 app.use('/admin/queues', requirePlatformAdmin, serverAdapter.getRouter());
 
 // Health check — used by Docker health checks and monitoring
@@ -109,8 +111,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error('Unhandled server error:', err);
   res.status(500).json({
     error: 'Internal Server Error',
-    message: err.message || 'Unknown error',
-    stack: err.stack || 'No stack trace' // Exposing temporarily for debugging
+    message: err.message || 'Unknown error'
   });
 });
 
