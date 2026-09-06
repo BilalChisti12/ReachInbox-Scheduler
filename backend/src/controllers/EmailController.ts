@@ -139,14 +139,11 @@ export class EmailController {
 
       stats.forEach(stat => {
         const status = stat.status.toLowerCase();
-        if (status in result) {
-          (result as any)[status] = stat._count;
-        } else {
-           (result as any)[status] = stat._count;
-        }
+        const count = typeof stat._count === 'number' ? stat._count : ((stat._count as any)?._all || 0);
+        (result as any)[status] = count;
       });
       
-      const scheduledCount = (result.scheduled || 0) + (result.delayed || 0);
+      const scheduledCount = (result.scheduled || 0) + (result.processing || 0) + (result.failed || 0);
 
       res.json({
         scheduled: scheduledCount,

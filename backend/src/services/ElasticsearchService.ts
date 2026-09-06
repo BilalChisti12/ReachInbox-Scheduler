@@ -137,7 +137,11 @@ export class ElasticsearchService {
     ];
 
     if (options.status) {
-      must.push({ term: { status: options.status } });
+      if (options.status === 'scheduled') {
+        must.push({ terms: { status: ['scheduled', 'processing', 'failed'] } });
+      } else {
+        must.push({ term: { status: options.status } });
+      }
     }
 
     if (options.startDate || options.endDate) {
