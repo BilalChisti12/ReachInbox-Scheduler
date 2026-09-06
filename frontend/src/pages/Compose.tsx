@@ -59,13 +59,16 @@ export const Compose: React.FC = () => {
       const text = event.target?.result as string;
       if (!text) return;
 
-      const emailMatches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi) || [];
-      const uniqueNewEmails = Array.from(new Set(emailMatches));
+      const tokens = text.split(/[\r\n,;]+/).map(t => t.trim()).filter(Boolean);
+      if (tokens.length > 0 && tokens[0].toLowerCase() === 'email') {
+        tokens.shift();
+      }
+      const uniqueTokens = Array.from(new Set(tokens));
 
-      if (uniqueNewEmails.length > 0) {
+      if (uniqueTokens.length > 0) {
         setRecipients(prev => {
           const existing = prev.split(',').map(e => e.trim()).filter(Boolean);
-          const combined = Array.from(new Set([...existing, ...uniqueNewEmails]));
+          const combined = Array.from(new Set([...existing, ...uniqueTokens]));
           return combined.join(', ');
         });
       }
