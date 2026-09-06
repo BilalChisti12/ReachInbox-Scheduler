@@ -139,7 +139,7 @@ export class EmailService {
       messageId: messageId ? `<${messageId}>` : undefined,
     });
 
-    const previewUrl = (nodemailer.getTestMessageUrl(info) as string | false) || null;
+    const previewUrl = (nodemailer.getTestMessageUrl(info as any) as string | false) || null;
     return { success: true, messageId: info.messageId, previewUrl };
   }
 }
