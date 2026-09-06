@@ -1,10 +1,10 @@
 // Vercel Serverless Function: /api/send-email
+// ES Module syntax required because frontend package.json has "type": "module"
 // This runs on Vercel (AWS Lambda) which does NOT block SMTP port 587.
-// The Render backend (which blocks SMTP) calls this endpoint over HTTPS instead.
 
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -30,14 +30,14 @@ module.exports = async function handler(req, res) {
   } = req.body;
 
   if (!to || !subject || !smtpUser || !smtpPass) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return res.status(400).json({ error: 'Missing required fields: to, subject, smtpUser, smtpPass' });
   }
 
   try {
     const transporter = nodemailer.createTransport({
       host: smtpHost || 'smtp.ethereal.email',
-      port: smtpPort || 587,
-      secure: false, // STARTTLS
+      port: Number(smtpPort) || 587,
+      secure: false, // STARTTLS on 587
       auth: {
         user: smtpUser,
         pass: smtpPass,
@@ -69,4 +69,4 @@ module.exports = async function handler(req, res) {
     console.error('[EmailBridge] SMTP error:', error.message);
     return res.status(500).json({ error: error.message });
   }
-};
+}
