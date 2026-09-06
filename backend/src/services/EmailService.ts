@@ -10,6 +10,8 @@ export class EmailService {
   private getTransporter(sender: Sender): nodemailer.Transporter {
     if (!this.transporters.has(sender.id)) {
       const transporter = nodemailer.createTransport({
+        pool: true,
+        maxConnections: 3,
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 15000,
