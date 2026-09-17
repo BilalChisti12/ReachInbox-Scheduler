@@ -15,7 +15,7 @@ export class EmailService {
     attachments: Array<{ filename: string, content: string, contentType: string }> = [],
     messageId?: string
   ) {
-    const isMock = process.env.MOCK_EMAILS === 'true';
+    const isMock = process.env.MOCK_EMAILS === 'true' || sender.smtpHost.includes('ethereal');
 
     const transporter = isMock ? nodemailer.createTransport({
       streamTransport: true,
