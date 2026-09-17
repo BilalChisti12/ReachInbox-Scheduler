@@ -80,8 +80,29 @@ const sessionConfig: session.SessionOptions = {
 };
 
 if (isProduction) {
+  // connect-redis v7+ expects a Node-Redis v4 style client where set() takes an options object.
+  // ioredis does not support this natively and stringifies it to "[object Object]", causing an ERR syntax error.
+  // We wrap the ioredis client in a Proxy to translate the arguments.
+  const redisSessionClient = new Proxy(redis, {
+    get(target: any, prop: string) {
+      if (prop === 'set') {
+        return async (key: string, val: string, options?: any) => {
+          if (options && options.expiration && options.expiration.type === 'EX') {
+            return target.set(key, val, 'EX', options.expiration.value);
+          }
+          return target.set(key, val);
+        };
+      }
+      if (prop === 'mGet') {
+        return (keys: string[]) => target.mget(keys);
+      }
+      const value = target[prop];
+      return typeof value === 'function' ? value.bind(target) : value;
+    }
+  });
+
   sessionConfig.store = new RedisStore({
-    client: redis,
+    client: redisSessionClient,
     prefix: 'reachinbox:sess:',
   });
   console.log('Session store: Redis');
