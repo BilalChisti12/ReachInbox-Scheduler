@@ -15,7 +15,12 @@ export class EmailService {
     attachments: Array<{ filename: string, content: string, contentType: string }> = [],
     messageId?: string
   ) {
-    const transporter = nodemailer.createTransport({
+    const isMock = process.env.MOCK_EMAILS === 'true';
+
+    const transporter = isMock ? nodemailer.createTransport({
+      streamTransport: true,
+      newline: 'windows'
+    }) : nodemailer.createTransport({
       host: sender.smtpHost,
       port: sender.smtpPort,
       secure: sender.smtpPort === 465,
@@ -51,10 +56,17 @@ export class EmailService {
       });
       
       let previewUrl = null;
-      // Nodemailer provides a helper to get Ethereal preview URLs automatically
-      const testMessageUrl = nodemailer.getTestMessageUrl(info);
-      if (testMessageUrl) {
-        previewUrl = testMessageUrl;
+      
+      if (isMock) {
+        // Simulate real network latency
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        previewUrl = 'https://ethereal.email/messages (Mocked Mode)';
+      } else {
+        // Nodemailer provides a helper to get Ethereal preview URLs automatically
+        const testMessageUrl = nodemailer.getTestMessageUrl(info);
+        if (testMessageUrl) {
+          previewUrl = testMessageUrl;
+        }
       }
       
       return { success: true, messageId: info.messageId, previewUrl };
