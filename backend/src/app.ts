@@ -126,7 +126,7 @@ app.use('/admin/queues', requirePlatformAdmin, serverAdapter.getRouter());
 
 // Health check — used by monitoring platforms
 app.get('/health', (req: express.Request, res: express.Response) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString(), frontendUrl: process.env.FRONTEND_URL });
 });
 
 // Protected test route — verifies middleware works
