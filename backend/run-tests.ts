@@ -6,11 +6,22 @@ const s = new CampaignService();
 
 async function runTests() {
   const u = await p.user.findFirst();
-  const sender = await p.sender.findFirst({ where: { userId: u.id, active: true } });
+  let sender = await p.sender.findFirst({ where: { userId: u.id, active: true } });
 
   if (!sender) {
-    console.log("No active sender found.");
-    return process.exit(1);
+    console.log("No active sender found. Creating a mock sender...");
+    sender = await p.sender.create({
+      data: {
+        userId: u.id,
+        email: 'test@example.com',
+        displayName: 'Test Sender',
+        smtpHost: 'smtp.ethereal.email',
+        smtpPort: 587,
+        smtpUsername: 'test',
+        smtpPassword: 'test',
+        active: true
+      }
+    });
   }
 
   console.log("Test 13: Scheduling Calculation (3 emails, 2s delay)");

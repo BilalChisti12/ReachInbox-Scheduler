@@ -11,6 +11,7 @@
         "start:worker": "node dist/worker.js",
         "lint": "eslint .",
         "format": "prettier --write \"src/**/*.ts\"",
+        "test": "npx tsx run-tests.ts",
         "postinstall": "prisma generate",
         "seed:demo": "npx tsx src/scripts/seedDemoAdmin.ts"
     },
