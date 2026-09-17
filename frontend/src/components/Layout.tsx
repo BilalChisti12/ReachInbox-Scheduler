@@ -50,7 +50,7 @@ export const Layout: React.FC = () => {
       >
         {/* Header inside Sidebar */}
         <div className="px-6 py-5 flex items-center justify-between md:block">
-          <span className="text-3xl font-black text-black tracking-tighter">ONB</span>
+          <img src="/logo.png" alt="ReachInbox Scheduler" className="h-8 object-contain" />
           <button 
             className="md:hidden text-slate-500 hover:text-slate-700" 
             onClick={() => setIsSidebarOpen(false)}
@@ -137,7 +137,7 @@ export const Layout: React.FC = () => {
             >
               <Menu size={24} />
             </button>
-            <span className="text-2xl font-black text-black tracking-tighter">ONB</span>
+            <img src="/logo.png" alt="ReachInbox Scheduler" className="h-8 object-contain" />
           </div>
           <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
             {user?.avatar ? (
