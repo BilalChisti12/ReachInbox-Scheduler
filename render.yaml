@@ -10,8 +10,8 @@ services:
     rootDir: backend
     branch: main
     autoDeploy: true
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && npm start
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm exec prisma migrate deploy && npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -63,7 +63,7 @@ services:
     rootDir: backend
     branch: main
     autoDeploy: true
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start:worker
     envVars:
       - key: NODE_ENV
