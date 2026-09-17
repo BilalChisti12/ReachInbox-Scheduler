@@ -10,12 +10,11 @@ const userRepository = new UserRepository();
 const googleClientId = process.env.GOOGLE_CLIENT_ID || 'mock_client_id';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || 'mock_client_secret';
 
-let defaultCallbackURL = 'http://localhost:5000/auth/google/callback';
+let callbackURL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/auth/google/callback';
 if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
   const frontendUrl = process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/$/, '');
-  defaultCallbackURL = `${frontendUrl}/auth/google/callback`;
+  callbackURL = `${frontendUrl}/auth/google/callback`;
 }
-const callbackURL = process.env.GOOGLE_CALLBACK_URL || defaultCallbackURL;
 
 passport.use(
   new GoogleStrategy(
