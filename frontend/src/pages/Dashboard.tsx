@@ -48,8 +48,8 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Top Search Bar */}
-      <div className="flex items-center gap-6 px-8 py-5 border-b border-slate-100">
-        <div className="relative flex-1 max-w-3xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 px-4 md:px-8 py-4 md:py-5 border-b border-slate-100">
+        <div className="relative w-full max-w-3xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
             type="text" 
@@ -59,7 +59,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-5 text-slate-400">
+        <div className="flex items-center gap-5 text-slate-400 self-end sm:self-auto">
           <button onClick={() => refetch()} className="hover:text-slate-600 transition-colors">
             <RefreshCw size={18} className={isFetching ? 'animate-spin text-blue-500' : ''} />
           </button>
@@ -87,16 +87,40 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
               <div 
                 key={email.id} 
                 onClick={() => navigate(`/emails/${email.id}`)}
-                className="flex items-center gap-4 px-8 py-3.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 md:px-8 py-4 md:py-3.5 hover:bg-slate-50 transition-colors group cursor-pointer"
               >
                 
-                {/* Recipient */}
-                <div className="w-64 shrink-0 truncate">
+                {/* Mobile Header: Recipient + Actions */}
+                <div className="flex items-center justify-between w-full sm:hidden mb-1">
+                  <span className="text-sm font-semibold text-slate-700 truncate">To: {email.recipient}</span>
+                  <div 
+                    className="flex items-center gap-3 text-slate-400"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button 
+                      onClick={() => deleteMutation.mutate(email.id)}
+                      disabled={deleteMutation.isPending && deleteMutation.variables === email.id}
+                      className="hover:text-red-500 transition-colors"
+                    >
+                      {deleteMutation.isPending && deleteMutation.variables === email.id ? (
+                        <Loader2 size={16} className="animate-spin text-red-500" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
+                    <button className="hover:text-yellow-400 transition-colors">
+                      <Star size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Desktop Recipient */}
+                <div className="hidden sm:block w-48 lg:w-64 shrink-0 truncate">
                   <span className="text-sm font-semibold text-slate-700">To: {email.recipient}</span>
                 </div>
 
                 {/* Status/Time Pill */}
-                <div className="shrink-0 w-48">
+                <div className="shrink-0 sm:w-48 order-3 sm:order-2">
                   {email.status.toLowerCase() === 'sent' ? (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium">
                       <Clock size={12} />
@@ -116,17 +140,17 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
                 </div>
 
                 {/* Subject & Body Snippet */}
-                <div className="flex-1 min-w-0 truncate text-sm">
+                <div className="flex-1 min-w-0 truncate text-sm order-2 sm:order-3 mb-2 sm:mb-0">
                   <span className="font-semibold text-slate-800">{email.subject}</span>
-                  <span className="text-slate-400 ml-2">
+                  <span className="text-slate-400 ml-2 hidden sm:inline">
                     - {email.delayReason ? `[Delayed: ${email.delayReason}] ` : ''}Scheduled via {email.status.toLowerCase()} pipeline...
                   </span>
                 </div>
 
-                {/* Actions */}
+                {/* Desktop Actions */}
                 <div 
-                  className="shrink-0 flex items-center gap-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
+                  className="hidden sm:flex shrink-0 items-center gap-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity order-4"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <button 
                     onClick={() => deleteMutation.mutate(email.id)}
@@ -143,8 +167,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
                     <Star size={16} />
                   </button>
                 </div>
-                {/* Default visible star if not hovering (to match design) */}
-                <div className="shrink-0 text-slate-300 group-hover:hidden">
+                <div className="hidden sm:block shrink-0 text-slate-300 group-hover:hidden order-5">
                   <Star size={16} />
                 </div>
                 

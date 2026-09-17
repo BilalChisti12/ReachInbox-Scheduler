@@ -1,12 +1,14 @@
-import React from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Send, Users, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Clock, Send, Users, Settings, LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
   
   const { data: stats } = useQuery({
     queryKey: ['emailStats'],
@@ -24,13 +26,37 @@ export const Layout: React.FC = () => {
     { to: '/settings', icon: <Settings size={18} />, label: 'Settings' },
   ];
 
+  // Close sidebar on route change on mobile
+  React.useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white overflow-hidden">
+      
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 z-40 md:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col">
-        {/* Logo */}
-        <div className="px-6 py-5">
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 flex flex-col transform transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Header inside Sidebar */}
+        <div className="px-6 py-5 flex items-center justify-between md:block">
           <span className="text-3xl font-black text-black tracking-tighter">ONB</span>
+          <button 
+            className="md:hidden text-slate-500 hover:text-slate-700" 
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <X size={24} />
+          </button>
         </div>
         
         {/* Profile Block */}
@@ -99,12 +125,37 @@ export const Layout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-white">
-        <div className="flex-1 overflow-y-auto">
+      {/* Main Content Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0">
+        
+        {/* Mobile Header Bar */}
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              className="text-slate-600 hover:text-slate-900 focus:outline-none" 
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <span className="text-2xl font-black text-black tracking-tighter">ONB</span>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-600 font-semibold">
+                {user?.email?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Main Area */}
+        <main className="flex-1 overflow-y-auto bg-white p-4 md:p-8">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
+

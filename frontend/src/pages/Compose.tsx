@@ -385,7 +385,7 @@ export const Compose: React.FC = () => {
             )}
 
             {/* Scheduling Controls */}
-            <div className="flex items-center gap-8 border-b border-slate-100 pb-4 pt-1">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-8 border-b border-slate-100 pb-4 pt-1">
               <div className="flex items-center gap-3">
                 <label className="text-xs font-medium text-slate-700">Delay between 2 emails</label>
                 <input
