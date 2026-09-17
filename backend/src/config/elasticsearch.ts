@@ -14,6 +14,7 @@ const auth = esUsername && esPassword
 const esClient = new Client({
   node: esUrl,
   auth,
+  requestTimeout: 10000,
 });
 
 export default esClient;
