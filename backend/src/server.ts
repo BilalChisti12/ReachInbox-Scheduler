@@ -1,5 +1,6 @@
 import app from './app';
 import { ElasticsearchService } from './services/ElasticsearchService';
+import { startWorker } from './worker/EmailWorker';
 
 const PORT = process.env.PORT || 5000;
 const elasticsearchService = new ElasticsearchService();
@@ -18,8 +19,14 @@ async function startServer() {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // In free tier / simple deployments, run the worker in the same process.
+    // If you explicitly spin up a separate worker process, set SEPARATE_WORKER=true.
+    if (process.env.SEPARATE_WORKER !== 'true') {
+      console.log('Starting internal Email Worker (single-process mode)...');
+      startWorker();
+    }
   });
 }
 
 startServer().catch(console.error);
-

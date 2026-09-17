@@ -49,9 +49,12 @@ app.use(
       // Allow requests with no origin (e.g. server-to-server, curl, mobile apps)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow BullMQ Dashboard (same origin)
+      if (origin.includes('reachinbox-scheduler') || origin.includes('localhost:5000')) return callback(null, true);
+      
       callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
-    credentials: true, // Required to send/receive session cookies cross-origin
+    credentials: true,
   })
 );
 
