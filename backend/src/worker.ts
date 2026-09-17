@@ -5,13 +5,13 @@ import { ElasticsearchService } from './services/ElasticsearchService';
 /**
  * worker.ts — Standalone BullMQ worker process.
  *
- * This is separate from server.ts so the worker runs in its own Docker container.
+ * This is separate from server.ts so the worker runs in its own process.
  * Benefits:
  *   - Worker and API can be restarted independently
  *   - Crash in worker does not affect the API
  *   - Worker can be scaled separately if needed
  *
- * In production: docker-compose.prod.yml runs this as the 'worker' service.
+ * In production: render.yaml runs this as a Background Worker service.
  * In development: run with `npm run worker:dev`
  */
 

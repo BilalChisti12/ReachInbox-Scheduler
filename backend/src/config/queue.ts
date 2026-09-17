@@ -1,25 +1,14 @@
 import { Queue } from 'bullmq';
-import Redis from 'ioredis';
-import { getEnv } from './env';
+import IORedis from 'ioredis';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisUrl = getEnv('REDIS_URL', 'redis://localhost:6379');
-
-const redisOptions: any = {
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+export const redisConnection = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
-};
-
-// Force TLS for Upstash to prevent ECONNRESET
-if (redisUrl.includes('upstash.io')) {
-  redisOptions.tls = { rejectUnauthorized: false };
-}
-
-export const redisConnection = new Redis(redisUrl, redisOptions);
-
-export const createBullConnection = () => new Redis(redisUrl, redisOptions);
+});
 
 export const emailQueue = new Queue('email-scheduler', {
-  connection: createBullConnection(),
+  connection: redisConnection,
 });

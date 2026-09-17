@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Hash, Server, Shield, ExternalLink, Loader2, User as UserIcon, Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
-import { getApiUrl } from '../config/env';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Settings: React.FC = () => {
@@ -11,7 +10,7 @@ export const Settings: React.FC = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileName, setProfileName] = useState(user?.name || '');
-  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [profileMessage, setProfileMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   const { data: slackStatus, isLoading: isCheckingSlack } = useQuery({
     queryKey: ['slackStatus'],
@@ -22,7 +21,7 @@ export const Settings: React.FC = () => {
   });
 
   const handleConnectSlack = () => {
-    window.location.href = `${getApiUrl()}/api/slack/auth`;
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/slack/auth`;
   };
 
   const handleDisconnectSlack = async () => {
@@ -30,14 +29,14 @@ export const Settings: React.FC = () => {
     try {
       await apiClient.post('/api/slack/disconnect');
       await queryClient.invalidateQueries({ queryKey: ['slackStatus'] });
-
+      
       // Clean up URL if it has the query param
       const url = new URL(window.location.href);
       if (url.searchParams.has('slack')) {
         url.searchParams.delete('slack');
         window.history.replaceState({}, '', url);
       }
-
+      
       alert('Slack disconnected successfully');
     } catch (err) {
       alert('Failed to disconnect Slack');
@@ -55,7 +54,7 @@ export const Settings: React.FC = () => {
 
     setIsUpdatingProfile(true);
     try {
-      await apiClient.patch('/auth/profile', { name: profileName.trim() });
+      await apiClient.patch('/api/auth/profile', { name: profileName.trim() });
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setProfileMessage({ type: 'success', text: 'Profile updated successfully' });
       setTimeout(() => setProfileMessage(null), 3000);
@@ -106,7 +105,7 @@ export const Settings: React.FC = () => {
               />
               <p className="text-xs text-slate-500 mt-2">Email addresses cannot be changed.</p>
             </div>
-
+            
             <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={handleUpdateProfile}
@@ -116,7 +115,7 @@ export const Settings: React.FC = () => {
                 {isUpdatingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
                 Save Changes
               </button>
-
+              
               {profileMessage && (
                 <p className={`text-sm font-medium ${profileMessage.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
                   {profileMessage.text}
@@ -180,7 +179,7 @@ export const Settings: React.FC = () => {
           <div className="p-6 bg-slate-50 flex items-center justify-between">
             <p className="text-sm text-slate-600">Restricted to platform administrators only.</p>
             <a
-              href={`${getApiUrl()}/admin/queues`}
+              href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/admin/queues`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors font-medium text-sm shadow-sm"

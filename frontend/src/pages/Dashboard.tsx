@@ -9,7 +9,6 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const statusFilter = defaultFilter;
 
   const deleteMutation = useMutation({
@@ -18,18 +17,6 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
-      queryClient.invalidateQueries({ queryKey: ['emailStats'] });
-    }
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      await apiClient.delete('/api/emails/bulk', { data: { ids } });
-    },
-    onSuccess: () => {
-      setSelectedEmails(new Set());
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
-      queryClient.invalidateQueries({ queryKey: ['emailStats'] });
     }
   });
 
@@ -44,7 +31,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
       const res = await apiClient.get<SearchResult>(`/api/emails/search?${params.toString()}`);
       return res.data;
     },
-    refetchInterval: 3000,
+    refetchInterval: 30000,
   });
 
   const formatTime = (dateString?: string | null) => {
@@ -58,51 +45,21 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
     });
   };
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked && data?.data) {
-      setSelectedEmails(new Set(data.data.map((email: EmailJob) => email.id)));
-    } else {
-      setSelectedEmails(new Set());
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Top Search Bar */}
-      <div className="flex items-center justify-between gap-6 px-8 py-5 border-b border-slate-100">
-        <div className="relative flex-1 max-w-3xl flex items-center gap-4">
+      <div className="flex items-center gap-6 px-8 py-5 border-b border-slate-100">
+        <div className="relative flex-1 max-w-3xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
-             type="checkbox"
-             checked={Boolean(data?.data?.length) && data!.data!.length > 0 && selectedEmails.size === data!.data!.length}
-             onChange={handleSelectAll}
-             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
+            type="text" 
+            placeholder="Search"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-200 transition-all text-sm text-slate-600 placeholder:text-slate-400"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search"
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-200 transition-all text-sm text-slate-600 placeholder:text-slate-400"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
         </div>
         <div className="flex items-center gap-5 text-slate-400">
-          {selectedEmails.size > 0 && (
-            <button 
-              onClick={() => {
-                if (window.confirm(`Are you sure you want to delete ${selectedEmails.size} selected email(s)? This action cannot be undone.`)) {
-                  bulkDeleteMutation.mutate(Array.from(selectedEmails));
-                }
-              }}
-              disabled={bulkDeleteMutation.isPending}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
-            >
-              {bulkDeleteMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              Delete ({selectedEmails.size})
-            </button>
-          )}
           <button onClick={() => refetch()} className="hover:text-slate-600 transition-colors">
             <RefreshCw size={18} className={isFetching ? 'animate-spin text-blue-500' : ''} />
           </button>
@@ -130,24 +87,9 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
               <div 
                 key={email.id} 
                 onClick={() => navigate(`/emails/${email.id}`)}
-                className={`flex items-center gap-4 px-8 py-3.5 hover:bg-slate-50 transition-colors group cursor-pointer ${selectedEmails.has(email.id) ? 'bg-slate-50/80' : ''}`}
+                className="flex items-center gap-4 px-8 py-3.5 hover:bg-slate-50 transition-colors group cursor-pointer"
               >
                 
-                {/* Selection Checkbox */}
-                <div className="shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
-                  <input 
-                    type="checkbox"
-                    checked={selectedEmails.has(email.id)}
-                    onChange={(e) => {
-                      const newSet = new Set(selectedEmails);
-                      if (e.target.checked) newSet.add(email.id);
-                      else newSet.delete(email.id);
-                      setSelectedEmails(newSet);
-                    }}
-                    className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                </div>
-
                 {/* Recipient */}
                 <div className="w-64 shrink-0 truncate">
                   <span className="text-sm font-semibold text-slate-700">To: {email.recipient}</span>
@@ -187,11 +129,7 @@ export const Dashboard: React.FC<{ defaultFilter?: string }> = ({ defaultFilter 
                   onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
                 >
                   <button 
-                    onClick={() => {
-                      if (window.confirm("Are you sure you want to delete this email? This action cannot be undone.")) {
-                        deleteMutation.mutate(email.id);
-                      }
-                    }}
+                    onClick={() => deleteMutation.mutate(email.id)}
                     disabled={deleteMutation.isPending && deleteMutation.variables === email.id}
                     className="hover:text-red-500 transition-colors"
                   >

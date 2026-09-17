@@ -1,9 +1,8 @@
 import axios from 'axios';
-import { getApiUrl } from '../config/env';
 
 // Create a centralized Axios instance
 export const apiClient = axios.create({
-  baseURL: getApiUrl(),
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   withCredentials: true, // Crucial for sending/receiving session cookies
 });
 

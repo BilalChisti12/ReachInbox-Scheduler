@@ -1,10 +1,9 @@
-import { Client } from '@opensearch-project/opensearch';
+import { Client } from '@elastic/elasticsearch';
 import dotenv from 'dotenv';
-import { getEnv } from './env';
 
 dotenv.config();
 
-const esUrl = getEnv('ELASTICSEARCH_URL', 'http://localhost:9200');
+const esUrl = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
 const esUsername = process.env.ELASTICSEARCH_USERNAME;
 const esPassword = process.env.ELASTICSEARCH_PASSWORD;
 

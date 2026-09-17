@@ -19,29 +19,26 @@ export class ElasticsearchService {
    */
   async initIndex() {
     try {
-      const response = await esClient.indices.exists({ index: this.INDEX_NAME });
-      const indexExists = response.body;
+      const indexExists = await esClient.indices.exists({ index: this.INDEX_NAME });
       
       if (!indexExists) {
         await esClient.indices.create({
           index: this.INDEX_NAME,
-          body: {
-            mappings: {
-              properties: {
-                id: { type: 'keyword' },
-                userId: { type: 'keyword' },
-                campaignId: { type: 'keyword' },
-                senderId: { type: 'keyword' },
-                sender: { type: 'keyword' },
-                recipient: { type: 'text', fields: { keyword: { type: 'keyword' } } },
-                subject: { type: 'text' },
-                body: { type: 'text' },
-                status: { type: 'keyword' },
-                scheduledAt: { type: 'date' },
-                sentAt: { type: 'date' },
-                createdAt: { type: 'date' },
-                updatedAt: { type: 'date' }
-              }
+          mappings: {
+            properties: {
+              id: { type: 'keyword' },
+              userId: { type: 'keyword' },
+              campaignId: { type: 'keyword' },
+              senderId: { type: 'keyword' },
+              sender: { type: 'keyword' },
+              recipient: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+              subject: { type: 'text' },
+              body: { type: 'text' },
+              status: { type: 'keyword' },
+              scheduledAt: { type: 'date' },
+              sentAt: { type: 'date' },
+              createdAt: { type: 'date' },
+              updatedAt: { type: 'date' }
             }
           }
         });
@@ -50,10 +47,7 @@ export class ElasticsearchService {
         console.log(`Elasticsearch index '${this.INDEX_NAME}' already exists.`);
       }
     } catch (error: any) {
-      console.error(`Failed to initialize Elasticsearch index. Error:`, JSON.stringify(error, null, 2));
-      if (error.message) {
-        console.error(`Message: ${error.message}`);
-      }
+      console.error(`Failed to initialize Elasticsearch index: ${error.message}`);
     }
   }
 
@@ -66,7 +60,7 @@ export class ElasticsearchService {
       await esClient.index({
         index: this.INDEX_NAME,
         id: emailJob.id,
-        body: {
+        document: {
           id: emailJob.id,
           userId: emailJob.userId,
           campaignId: emailJob.campaignId,
@@ -98,29 +92,12 @@ export class ElasticsearchService {
       await esClient.delete({
         index: this.INDEX_NAME,
         id: id,
-        refresh: true
+        refresh: 'true'
       });
     } catch (error: any) {
       if (error.meta?.statusCode !== 404) {
         console.error(`Failed to delete email ${id} from ES: ${error.message}`);
       }
-    }
-  }
-
-  /**
-   * Deletes multiple EmailJob documents from the index.
-   */
-  async deleteEmails(ids: string[]) {
-    if (!ids || ids.length === 0) return;
-    
-    try {
-      const body = ids.flatMap(id => [{ delete: { _index: this.INDEX_NAME, _id: id } }]);
-      await esClient.bulk({
-        refresh: true,
-        body
-      });
-    } catch (error: any) {
-      console.error(`Failed to bulk delete emails from ES: ${error.message}`);
     }
   }
 
@@ -137,11 +114,7 @@ export class ElasticsearchService {
     ];
 
     if (options.status) {
-      if (options.status === 'scheduled') {
-        must.push({ terms: { status: ['scheduled', 'processing', 'failed'] } });
-      } else {
-        must.push({ term: { status: options.status } });
-      }
+      must.push({ term: { status: options.status } });
     }
 
     if (options.startDate || options.endDate) {
@@ -166,23 +139,22 @@ export class ElasticsearchService {
         index: this.INDEX_NAME,
         from,
         size: limit,
-        body: {
-          query: {
-            bool: {
-              must
-            }
-          },
-          sort: [
-            { createdAt: { order: 'desc' } }
-          ]
-        }
+        query: {
+          bool: {
+            must
+          }
+        },
+        sort: [
+          { createdAt: { order: 'desc' } }
+        ]
       });
 
-      const hits = result.body.hits.hits.map((hit: any) => hit._source);
+      const hits = result.hits.hits.map(hit => hit._source);
       
-      const total = typeof result.body.hits.total === 'number' 
-        ? result.body.hits.total 
-        : (result.body.hits.total as any)?.value || 0;
+      // Total could be an object or number depending on ES version, safely unwrap it
+      const total = typeof result.hits.total === 'number' 
+        ? result.hits.total 
+        : (result.hits.total as any)?.value || 0;
 
       return {
         data: hits,

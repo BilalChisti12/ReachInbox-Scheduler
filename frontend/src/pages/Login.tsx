@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getApiUrl } from '../config/env';
 import { apiClient } from '../api/client';
 import { Loader2 } from 'lucide-react';
 
@@ -32,12 +31,7 @@ export const Login: React.FC = () => {
   });
 
   const handleGoogleLogin = () => {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) {
-      alert("Configuration Error: The backend API URL is missing. Please add VITE_API_URL in your Vercel project settings.");
-      return;
-    }
-    window.location.href = `${apiUrl}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { getEnvArray } from '../config/env';
 import passport from '../config/passport';
 import bcrypt from 'bcryptjs';
 import { UserRepository } from '../repositories/UserRepository';
@@ -19,14 +18,14 @@ router.get(
   '/google/callback',
   (req, res, next) => {
     // Determine the frontend URL (taking the first if it's a comma-separated list)
-    const frontendUrls = getEnvArray('FRONTEND_URL', 'http://localhost:5173');
+    const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
     const frontendUrl = frontendUrls[0].trim();
     
     passport.authenticate('google', { failureRedirect: `${frontendUrl}/login?error=oauth_failed` })(req, res, next);
   },
   (req: Request, res: Response) => {
     // On successful login, redirect to frontend scheduled inbox
-    const frontendUrls = getEnvArray('FRONTEND_URL', 'http://localhost:5173');
+    const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
     const frontendUrl = frontendUrls[0].trim();
     res.redirect(`${frontendUrl}/scheduled`);
   }

@@ -2,49 +2,29 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
+import { RedisStore } from 'connect-redis';
 import passport from 'passport';
 import authRoutes from './routes/auth';
 import senderRoutes from './routes/senders';
 import campaignRoutes from './routes/campaigns';
 import emailRoutes from './routes/emails';
 import slackRoutes from './routes/slack';
-import adminRoutes from './routes/admin';
 import { requireAuth } from './middleware/requireAuth';
 import { requirePlatformAdmin } from './middleware/requirePlatformAdmin';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { emailQueue, redisConnection, createBullConnection } from './config/queue';
-import RedisStore from 'connect-redis';
-import { getEnvArray } from './config/env';
-import { QueueEvents } from 'bullmq';
-import { EmailJobRepository } from './repositories/EmailJobRepository';
-import { ElasticsearchService } from './services/ElasticsearchService';
-
-// Initialize two-way synchronization from Bull Board -> Database/Elasticsearch
-const queueEvents = new QueueEvents('email-scheduler', { connection: createBullConnection() });
-const emailJobSyncRepo = new EmailJobRepository();
-const elasticSyncService = new ElasticsearchService();
-
-queueEvents.on('removed', async ({ jobId }) => {
-  if (jobId && jobId.startsWith('email-job-')) {
-    const id = jobId.replace('email-job-', '');
-    try {
-      await emailJobSyncRepo.deleteById(id);
-      await elasticSyncService.deleteEmail(id);
-      console.log(`Successfully synced Bull Board deletion for job ${id}`);
-    } catch (err: any) {
-      console.error(`Failed to sync Bull Board deletion for job ${id}:`, err.message);
-    }
-  }
-});
+import { emailQueue } from './config/queue';
+import redis from './config/redis';
 
 const app = express();
 
-// Trust Nginx/Render reverse proxy — required so express-session sets secure cookies correctly
-// behind a proxy (the proxy terminates HTTPS, Express sees HTTP internally).
-// We set this unconditionally to avoid issues if NODE_ENV is misconfigured.
-app.set('trust proxy', 1);
+// Trust proxy — required for secure cookies behind Render/Nginx reverse proxy.
+// Render terminates HTTPS at its load balancer, Express sees HTTP internally.
+// Without this, express-session refuses to set secure cookies.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Set up Bull Board
 const serverAdapter = new ExpressAdapter();
@@ -56,7 +36,12 @@ createBullBoard({
 });
 
 // CORS — allow configured frontend origin(s)
-const allowedOrigins = getEnvArray('FRONTEND_URL', 'http://localhost:5173');
+// In production: FRONTEND_URL=https://your-app.vercel.app
+// Supports comma-separated origins for multiple Vercel preview URLs
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
@@ -64,11 +49,7 @@ app.use(
       // Allow requests with no origin (e.g. server-to-server, curl, mobile apps)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
-      
-      // Do NOT pass an Error to the callback, otherwise it causes a 500 Internal Server Error
-      // for regular GET navigation requests (like OAuth redirects) that happen to send an Origin header.
-      // Passing (null, false) simply omits the CORS headers, correctly failing XHR but allowing navigation.
-      callback(null, false);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true, // Required to send/receive session cookies cross-origin
   })
@@ -79,25 +60,36 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Session configuration
-// If the frontend URL is not localhost, we are doing cross-domain requests.
-// We MUST set secure: true and sameSite: 'none' for the browser to send cookies cross-domain.
-const isCrossDomain = !allowedOrigins[0].includes('localhost');
+// Production: cookies must be secure=true and sameSite='none' because
+// the frontend (Vercel, HTTPS) and backend (Render, HTTPS) are on different domains.
+const isProduction = process.env.NODE_ENV === 'production';
 
-app.use(
-  session({
-    store: new RedisStore({ client: redisConnection, prefix: 'reachinbox:sess:' }),
-    secret: process.env.SESSION_SECRET || 'change-this-in-production',
-    resave: false,
-    saveUninitialized: false,
-    name: 'reachinbox.sid',
-    cookie: {
-      secure: isCrossDomain,
-      httpOnly: true,
-      sameSite: isCrossDomain ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    },
-  })
-);
+// In production, use Redis as the session store so sessions survive server restarts.
+// In development, the default MemoryStore is used (no Redis required for local dev without Docker).
+const sessionConfig: session.SessionOptions = {
+  secret: process.env.SESSION_SECRET || 'change-this-in-production',
+  resave: false,
+  saveUninitialized: false,
+  name: 'reachinbox.sid',
+  cookie: {
+    secure: isProduction,
+    httpOnly: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  },
+};
+
+if (isProduction) {
+  sessionConfig.store = new RedisStore({
+    client: redis,
+    prefix: 'reachinbox:sess:',
+  });
+  console.log('Session store: Redis');
+} else {
+  console.log('Session store: MemoryStore (development only)');
+}
+
+app.use(session(sessionConfig));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -109,10 +101,9 @@ app.use('/api/senders', requireAuth, senderRoutes);
 app.use('/api/campaigns', requireAuth, campaignRoutes);
 app.use('/api/emails', requireAuth, emailRoutes);
 app.use('/api/slack', slackRoutes);
-app.use('/api/admin', requirePlatformAdmin, adminRoutes);
 app.use('/admin/queues', requirePlatformAdmin, serverAdapter.getRouter());
 
-// Health check — used by Docker health checks and monitoring
+// Health check — used by monitoring platforms
 app.get('/health', (req: express.Request, res: express.Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -124,15 +115,6 @@ app.get('/api/protected-test', requireAuth, (req: express.Request, res: express.
     message: 'You have accessed a protected resource successfully.',
     tenantId: req.user!.id,
     userEmail: req.user!.email,
-  });
-});
-
-// Global error handler to help debug production 500 errors
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled server error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message || 'Unknown error'
   });
 });
 

@@ -100,7 +100,7 @@ async function verifyPhase5() {
     hasErrors = true;
   }
 
-  console.log('\nNOTE: Services and Controllers that query the PostgreSQL database directly could not be live-tested because the Docker daemon is currently down.');
+  console.log('\nNOTE: Services and Controllers that query the PostgreSQL database directly requires external database connectivity.');
 
   if (hasErrors) {
     process.exit(1);

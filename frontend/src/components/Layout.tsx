@@ -14,7 +14,7 @@ export const Layout: React.FC = () => {
       const res = await apiClient.get('/api/emails/stats');
       return res.data;
     },
-    refetchInterval: 3000,
+    refetchInterval: 30000,
   });
 
   const navItems = [
@@ -30,7 +30,7 @@ export const Layout: React.FC = () => {
       <aside className="w-64 bg-white border-r border-slate-100 flex flex-col">
         {/* Logo */}
         <div className="px-6 py-5">
-          <img src="/logo.png" alt="ReachInbox" className="h-9 w-auto object-contain" />
+          <span className="text-3xl font-black text-black tracking-tighter">ONB</span>
         </div>
         
         {/* Profile Block */}

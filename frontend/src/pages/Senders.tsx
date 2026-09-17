@@ -12,7 +12,7 @@ export const Senders: React.FC = () => {
   const [newSenderName, setNewSenderName] = useState('');
   const [newSenderPassword, setNewSenderPassword] = useState('');
   const [newSenderHost, setNewSenderHost] = useState('');
-  const [newSenderPort, setNewSenderPort] = useState(2525);
+  const [newSenderPort, setNewSenderPort] = useState(587);
 
   const { data: senders, isLoading } = useQuery({
     queryKey: ['senders'],
@@ -33,7 +33,7 @@ export const Senders: React.FC = () => {
       setNewSenderName('');
       setNewSenderPassword('');
       setNewSenderHost('');
-      setNewSenderPort(2525);
+      setNewSenderPort(587);
     },
     onError: (err: any) => {
       alert(err.response?.data?.error || 'Failed to create sender');
@@ -160,7 +160,7 @@ export const Senders: React.FC = () => {
                 </div>
                 <div className="w-24">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Port</label>
-                  <input type="number" value={newSenderPort} onChange={e => setNewSenderPort(parseInt(e.target.value))} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="2525" />
+                  <input type="number" value={newSenderPort} onChange={e => setNewSenderPort(parseInt(e.target.value))} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="587" />
                 </div>
               </div>
             </div>

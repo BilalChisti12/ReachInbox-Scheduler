@@ -108,25 +108,4 @@ export class EmailJobRepository {
     });
     return result.count > 0;
   }
-
-  async deleteById(id: string): Promise<boolean> {
-    try {
-      const result = await prisma.emailJob.delete({
-        where: { id }
-      });
-      return !!result;
-    } catch {
-      return false; // Silently ignore if not found
-    }
-  }
-
-  async deleteManyByIdsAndUserId(ids: string[], userId: string): Promise<number> {
-    const result = await prisma.emailJob.deleteMany({
-      where: { 
-        id: { in: ids },
-        userId 
-      }
-    });
-    return result.count;
-  }
 }

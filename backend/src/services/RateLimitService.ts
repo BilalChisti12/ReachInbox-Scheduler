@@ -61,18 +61,4 @@ export class RateLimitService {
 
     return result as number;
   }
-
-  /**
-   * Refunds a rate limit slot if an email failed to send and will be retried.
-   */
-  async refund(senderId: string, campaignId: string): Promise<void> {
-    const now = new Date();
-    const hourKey = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}-${now.getUTCHours()}`;
-
-    const senderKey = `rate:sender:${senderId}:${hourKey}`;
-    const campaignKey = `rate:campaign:${campaignId}:${hourKey}`;
-
-    await redisConnection.decr(senderKey);
-    await redisConnection.decr(campaignKey);
-  }
 }

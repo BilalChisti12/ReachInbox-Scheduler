@@ -29,9 +29,50 @@ export class EmailController {
         endDate: req.query.endDate as string
       };
 
-      const results = await elasticsearchService.searchEmails(userId, options);
-      
-      res.json(results);
+      // Try Elasticsearch first; fall back to PostgreSQL if ES is unavailable
+      try {
+        const results = await elasticsearchService.searchEmails(userId, options);
+        res.json(results);
+        return;
+      } catch (esError: any) {
+        console.warn(`Elasticsearch unavailable, falling back to database search: ${esError.message}`);
+      }
+
+      // Fallback: PostgreSQL-based search (less powerful but always available)
+      const page = Math.max(1, options.page || 1);
+      const limit = Math.min(100, Math.max(1, options.limit || 20));
+      const skip = (page - 1) * limit;
+
+      const where: any = { userId };
+      if (options.status) where.status = options.status;
+      if (options.startDate || options.endDate) {
+        where.scheduledAt = {};
+        if (options.startDate) where.scheduledAt.gte = new Date(options.startDate);
+        if (options.endDate) where.scheduledAt.lte = new Date(options.endDate);
+      }
+      if (options.q) {
+        where.OR = [
+          { subject: { contains: options.q, mode: 'insensitive' } },
+          { recipient: { contains: options.q, mode: 'insensitive' } },
+          { body: { contains: options.q, mode: 'insensitive' } },
+        ];
+      }
+
+      const [data, total] = await Promise.all([
+        prisma.emailJob.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: { sender: { select: { email: true, displayName: true } } },
+        }),
+        prisma.emailJob.count({ where }),
+      ]);
+
+      res.json({
+        data,
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      });
     } catch (error: any) {
       console.error(`EmailController search error:`, error);
       res.status(500).json({ error: 'Failed to search emails' });
@@ -75,46 +116,6 @@ export class EmailController {
     }
   }
 
-  async bulkDeleteEmails(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      const { ids } = req.body;
-      
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-      
-      if (!Array.isArray(ids) || ids.length === 0) {
-        res.status(400).json({ error: 'No email IDs provided' });
-        return;
-      }
-
-      // 1. Delete from PostgreSQL
-      const deletedCount = await emailJobRepo.deleteManyByIdsAndUserId(ids, userId);
-      
-      // 2. Delete from Elasticsearch
-      await elasticsearchService.deleteEmails(ids);
-
-      // 3. Remove from BullMQ queue
-      for (const id of ids) {
-        try {
-          const bullJob = await emailQueue.getJob(`email-job-${id}`);
-          if (bullJob) {
-            await bullJob.remove();
-          }
-        } catch (err: any) {
-          console.error(`Failed to remove job ${id} from BullMQ: ${err.message}`);
-        }
-      }
-
-      res.json({ success: true, message: `Deleted ${deletedCount} emails`, deletedCount });
-    } catch (error: any) {
-      console.error(`EmailController bulk delete error:`, error);
-      res.status(500).json({ error: 'Failed to bulk delete emails' });
-    }
-  }
-
   async getStats(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
@@ -139,11 +140,14 @@ export class EmailController {
 
       stats.forEach(stat => {
         const status = stat.status.toLowerCase();
-        const count = typeof stat._count === 'number' ? stat._count : ((stat._count as any)?._all || 0);
-        (result as any)[status] = count;
+        if (status in result) {
+          (result as any)[status] = stat._count;
+        } else {
+           (result as any)[status] = stat._count;
+        }
       });
       
-      const scheduledCount = (result.scheduled || 0) + (result.processing || 0) + (result.failed || 0);
+      const scheduledCount = (result.scheduled || 0) + (result.delayed || 0);
 
       res.json({
         scheduled: scheduledCount,

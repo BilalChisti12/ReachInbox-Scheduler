@@ -12,14 +12,13 @@ import { EmailDetails } from './pages/EmailDetails';
 
 const queryClient = new QueryClient();
 
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
-
+          
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/scheduled" element={<Dashboard defaultFilter="scheduled" />} />
@@ -31,7 +30,7 @@ function App() {
               <Route path="/" element={<Navigate to="/scheduled" replace />} />
             </Route>
           </Route>
-
+          
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

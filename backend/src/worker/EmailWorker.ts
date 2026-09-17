@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { redisConnection, createBullConnection } from '../config/queue';
+import { redisConnection } from '../config/queue';
 import { EmailJobRepository } from '../repositories/EmailJobRepository';
 import { EmailService } from '../services/EmailService';
 import { RateLimitService } from '../services/RateLimitService';
@@ -85,9 +85,8 @@ export function startWorker() {
       }
 
       // 4.1. Rate Limit Check (using Atomic Lua Script)
-      const globalSenderLimit = Number(process.env.MAX_EMAILS_PER_HOUR) || 200;
+      const senderLimit = Number(process.env.MAX_EMAILS_PER_HOUR) || 200;
       const campaignLimit = emailRecord.campaign.hourlyLimit;
-      const senderLimit = globalSenderLimit;
 
       console.log(`Checking rate limit for Sender: ${sender.id} (Limit: ${senderLimit}), Campaign: ${emailRecord.campaign.id} (Limit: ${campaignLimit})`);
       
@@ -154,10 +153,6 @@ export function startWorker() {
 
       console.log(`Processing email job ${emailId} to ${emailRecord.recipient}...`);
 
-      // 4.2 Minimum Delay Between Each Email Send (per assignment constraints)
-      const minDelayMs = Number(process.env.MIN_EMAIL_DELAY_MS) || 2000;
-      await new Promise(res => setTimeout(res, minDelayMs));
-
       // 5. Send email using the existing EmailService
       try {
         const messageId = `${emailRecord.id}@reachinbox.local`;
@@ -194,13 +189,6 @@ export function startWorker() {
       } catch (error: any) {
         console.error(`Failed to send email job ${emailId}:`, error.message);
         
-        // Refund the rate limit slot since this attempt failed and didn't result in a sent email
-        try {
-          await rateLimitService.refund(sender.id, emailRecord.campaign.id);
-        } catch (refundErr: any) {
-          console.error(`Failed to refund rate limit slot for job ${emailId}:`, refundErr.message);
-        }
-        
         if (job.attemptsMade + 1 >= (job.opts.attempts || 1)) {
           console.error(`Job ${emailId} has exhausted all retries. Marking as failed in DB.`);
           const failedJob = await emailJobRepo.markAsFailed(emailId, error.message);
@@ -225,7 +213,7 @@ export function startWorker() {
       }
     },
     {
-      connection: createBullConnection(),
+      connection: redisConnection,
       concurrency,
     }
   );

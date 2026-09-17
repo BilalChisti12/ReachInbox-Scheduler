@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/requireAuth';
 import { SlackService } from '../services/SlackService';
 import crypto from 'crypto';
-import { getEnvArray } from '../config/env';
 
 const router = Router();
 const slackService = new SlackService();
@@ -45,7 +44,7 @@ router.get('/callback', requireAuth, async (req: Request, res: Response) => {
     await slackService.exchangeCode(code, userId);
     
     // Redirect to settings page so user sees Slack connection confirmed
-    const frontendUrl = getEnvArray('FRONTEND_URL', 'http://localhost:5173')[0];
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/settings?slack=connected`);
   } catch (err: any) {
     console.error('Slack OAuth exchange failed:', err);
