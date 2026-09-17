@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a centralized Axios instance
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: '',
   withCredentials: true, // Crucial for sending/receiving session cookies
 });
 
